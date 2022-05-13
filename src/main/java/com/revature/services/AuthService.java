@@ -1,6 +1,12 @@
 package com.revature.services;
 
+import com.revature.exceptions.NewUserHasNonZeroIdException;
+import com.revature.exceptions.RegistrationUnsuccessfulException;
+import com.revature.exceptions.UsernameNotUniqueException;
+import com.revature.exceptions.WrongPasswordException;
 import com.revature.models.User;
+import com.revature.repositories.IUserDAO;
+import com.revature.repositories.UserDAO;
 
 import java.util.Optional;
 
@@ -17,7 +23,7 @@ import java.util.Optional;
  * </ul>
  */
 public class AuthService {
-
+	protected IUserDAO userDao = new UserDAO();
     /**
      * <ul>
      *     <li>Needs to check for existing users with username/email provided.</li>
@@ -27,8 +33,22 @@ public class AuthService {
      *     <li>Must return user object if the user logs in successfully.</li>
      * </ul>
      */
-    public User login(String username, String password) {
-        return null;
+    public User login(String username, String password){
+    	
+    	Optional<User> optUser = userDao.getByUsername(username);
+    	
+    	User loginUser = optUser.get();
+    	System.out.println(loginUser.getUsername()+password);
+    	try {
+    		if(loginUser.getPassword().equals(password)) {
+    			System.out.println("Access Granted!");
+    			return loginUser;
+    		}else {
+    			throw new WrongPasswordException("Wrong username or password.");
+    		}
+    	}catch(WrongPasswordException e) {
+    		return null;
+    	}
     }
 
     /**
@@ -45,10 +65,27 @@ public class AuthService {
      * After registration, the id will be a positive integer.
      */
     public User register(User userToBeRegistered) {
-        return null;
+    	
+    	User user = null;
+    		
+    		Optional<User> optUser = userDao.getByUsername(userToBeRegistered.getUsername());
+    		
+    		if(optUser.isPresent()) {
+    			System.out.println(optUser.get().getId());
+    			throw new UsernameNotUniqueException("Username already exist! Please try again.");
+    		}else {
+    			user = userDao.create(userToBeRegistered);
+    			if(user ==null) {
+    				throw new RegistrationUnsuccessfulException("Couldn't register the new User. TRy again!");
+    			}
+    		}
+    		return user;
+    		
     }
 
-    /**
+    
+
+	/**
      * This is an example method signature for retrieving the currently logged-in user.
      * It leverages the Optional type which is a useful interface to handle the
      * possibility of a user being unavailable.

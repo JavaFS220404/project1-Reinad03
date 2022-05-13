@@ -1,11 +1,20 @@
 package com.revature.services;
 
+import com.revature.exceptions.RegistrationUnsuccessfulException;
+import com.revature.exceptions.ReimbursementUpdateFailedException;
 import com.revature.models.Reimbursement;
+import com.revature.models.Role;
 import com.revature.models.Status;
 import com.revature.models.User;
+import com.revature.repositories.IReimbursementDAO;
+import com.revature.repositories.IUserDAO;
+import com.revature.repositories.ReimbursementDAO;
+import com.revature.repositories.UserDAO;
 
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The ReimbursementService should handle the submission, processing,
@@ -25,7 +34,8 @@ import java.util.List;
  * </ul>
  */
 public class ReimbursementService {
-
+		protected IReimbursementDAO reimbDao = new ReimbursementDAO();
+		protected IUserDAO userDao = new UserDAO();
     /**
      * <ul>
      *     <li>Should ensure that the user is logged in as a Finance Manager</li>
@@ -41,6 +51,19 @@ public class ReimbursementService {
      * After processing, the reimbursement will have its status changed to either APPROVED or DENIED.
      */
     public Reimbursement process(Reimbursement unprocessedReimbursement, Status finalStatus, User resolver) {
+    	
+    	User reimbResolver = userDao.getById(resolver.getId()).get();
+    	Role userRole = reimbResolver.getRole();
+    	if(userRole== Role.FINANCE_MANAGER) {
+    		Optional<Reimbursement> reimbursement = reimbDao.getOneById(unprocessedReimbursement.getId());
+    		if(reimbursement.isPresent()) {
+    			unprocessedReimbursement.setStatus(finalStatus);
+    			unprocessedReimbursement.setResolver(resolver);
+    			reimbDao.update(unprocessedReimbursement);
+    		}else {
+    			throw new ReimbursementUpdateFailedException("Couldn't update the status. Try again!");
+    		}
+    	}
         return null;
     }
 
@@ -48,6 +71,15 @@ public class ReimbursementService {
      * Should retrieve all reimbursements with the correct status.
      */
     public List<Reimbursement> getReimbursementsByStatus(Status status) {
-        return Collections.emptyList();
+        return reimbDao.getByStatus(status);
+    }
+    
+    public List<Optional<Reimbursement>> getReimbursementList(int id){
+    	return reimbDao.getById(id);
+    }
+    
+    public boolean newReimbursement(Reimbursement reimbursement) {
+    		return reimbDao.addNewReimbursement(reimbursement);
+    	
     }
 }
